@@ -2,6 +2,24 @@
 
 [Paper](https://arxiv.org/abs/2505.19590)
 
+
+**Update [2025-06-02]**: We have released four model checkpoints trained on the MATH dataset for one epoch. You're welcome to try out the models and evaluate their performance!
+
+---
+
+## 🔍 Released Models (MATH, 1 Epoch)
+
+| Model Name | Size | Method | Hugging Face Link |
+|------------|------|--------|--------------------|
+| `sunblaze-ucb/Qwen2.5-1.5B-GRPO-MATH-1EPOCH` | 1.5B | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-1.5B-GRPO-MATH-1EPOCH) |
+| `sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH` | 3B   | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH) |
+| `sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH` | 1.5B | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH) |
+| `sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH` | 3B   | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH) |
+
+---
+
+
+
 Intuitor ships in two self-contained variants: open-r1-intuitor and verl-intuitor. Each variant is a complete implementation of the Intuitor algorithm, allowing you to choose the one that best fits your needs. The results presented in our paper were obtained using the open-r1 variant.
 
 Both variant folders retain their original **Apache-2.0** `LICENSE` (and any accompanying `NOTICE`) files, as required by their respective upstream projects.
