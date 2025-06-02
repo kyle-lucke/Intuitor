@@ -5,7 +5,7 @@
 
 **Intuitor** is a reinforcement learning method that fine-tunes large language models (LLMs) using *self-certainty*—the model’s own internal confidence—as the sole reward. It is built on a novel paradigm we call **Reinforcement Learning from Internal Feedback (RLIF)**.
 
-![Overview](figs/results.png)
+![Overview](figs/rlif.png)
 
 ### 🧭 What is RLIF?
 
@@ -13,7 +13,7 @@
 
 Intuitor instantiates RLIF by using **self-certainty**—a model's confidence measured via KL divergence to uniform—as an intrinsic reward in the GRPO policy optimization algorithm.
 
----
+![Intuitor](figs/intuitor.png)
 
 ## 🚀 Update [2025-06-02]
 
@@ -27,7 +27,6 @@ We have released four model checkpoints trained on the MATH dataset for one epoc
 | `sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH` | 1.5B | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH) |
 | `sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH` | 3B   | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH) |
 
----
 
 
 ## 📦 Repository Structure
@@ -41,9 +40,7 @@ Both are licensed under Apache 2.0 and include their respective `LICENSE` and `N
 
 
 
-
 ## 🛠️ Getting Started
----
 
 Firstly, cd into the desired variant folder and set up the enviornment as specified in the `README.md` file of that variant. Then follow the instructions below to run the example training script.
 
@@ -74,7 +71,6 @@ bash math_intuitor.sh
 
 **Note**: The only heuristic in Intuitor is the prompt used to query the model. As a result, performance can sometimes be sensitive to prompt design. If the model does not appear to learn effectively, we recommend trying alternative prompts or using the original prompt provided in our setup.
 
----
 
 ## 📊 Benchmarks
 
@@ -88,6 +84,7 @@ Intuitor achieves:
 
 For detailed results, see Table 1 in the paper.
 
+![Results](figs/results.png)
 
 ## 📚 References
 
@@ -97,7 +94,6 @@ This project builds upon the following open-source repositories:
 
 - [verl](https://github.com/volcengine/verl) License: [Apache License 2.0](https://github.com/volcengine/verl/blob/main/LICENSE)
 
----
 
 ## 📄 Citation
 
