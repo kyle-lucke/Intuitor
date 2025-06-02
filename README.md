@@ -1,13 +1,24 @@
-# Intuitor: Learning to Reason without External Rewards
+# Learning to Reason without External Rewards
 
-[Paper](https://arxiv.org/abs/2505.19590)
+[📄 Paper](https://arxiv.org/abs/2505.19590) | [🤗 Hugging Face](https://huggingface.co/sunblaze-ucb)
 
 
-**Update [2025-06-02]**: We have released four model checkpoints trained on the MATH dataset for one epoch. You're welcome to try out the models and evaluate their performance!
+**Intuitor** is a reinforcement learning method that fine-tunes large language models (LLMs) using *self-certainty*—the model’s own internal confidence—as the sole reward. It is built on a novel paradigm we call **Reinforcement Learning from Internal Feedback (RLIF)**.
+
+![Overview](figs/results.png)
+
+### 🧭 What is RLIF?
+
+**Reinforcement Learning from Internal Feedback (RLIF)** is a training framework where language models learn *without any external rewards, gold labels, or verifiers*. Instead, models improve by optimizing *intrinsic signals*—such as confidence in their own answers—generated entirely from within. RLIF enables scalable and domain-agnostic fine-tuning of LLMs in settings where human feedback or verifiable supervision is expensive or unavailable.
+
+Intuitor instantiates RLIF by using **self-certainty**—a model's confidence measured via KL divergence to uniform—as an intrinsic reward in the GRPO policy optimization algorithm.
 
 ---
 
-## 🔍 Released Models (MATH, 1 Epoch)
+## 🚀 Update [2025-06-02]
+
+We have released four model checkpoints trained on the MATH dataset for one epoch. You're welcome to try out the models and evaluate their performance!
+
 
 | Model Name | Size | Method | Hugging Face Link |
 |------------|------|--------|--------------------|
@@ -19,18 +30,19 @@
 ---
 
 
+## 📦 Repository Structure
 
-Intuitor ships in two self-contained variants: open-r1-intuitor and verl-intuitor. Each variant is a complete implementation of the Intuitor algorithm, allowing you to choose the one that best fits your needs. The results presented in our paper were obtained using the open-r1 variant.
+This repository contains **two self-contained implementations** of Intuitor:
 
-Both variant folders retain their original **Apache-2.0** `LICENSE` (and any accompanying `NOTICE`) files, as required by their respective upstream projects.
+- [`open-r1-intuitor`](./open-r1-intuitor/README.md): Based on Hugging Face’s Open-R1, reproducing DeepSeek-R1 in a fully open-source fashion.
+- [`verl-intuitor`](./verl-intuitor/README.md): Based on VERL, a high-performance RL training library designed for LLMs.
 
-See the respective folder for more details:
-- [open-r1-intuitor](./open-r1-intuitor/README.md)
-- [verl-intuitor](./verl-intuitor/README.md)
+Both are licensed under Apache 2.0 and include their respective `LICENSE` and `NOTICE` files.
 
-![Overview](figs/results.png)
 
-## Getting started
+
+
+## 🛠️ Getting Started
 ---
 
 Firstly, cd into the desired variant folder and set up the enviornment as specified in the `README.md` file of that variant. Then follow the instructions below to run the example training script.
@@ -53,32 +65,40 @@ First, download the MATH dataset and prepare it using the following Python scrip
 python examples/data_preprocess/math_dataset.py
 ```
 
-Then, run the following command to start the training:
+Then, run the following command to start the training (Modify the WANDB_KEY in the `math_intuitor.sh` script to your own WANDB key.):
 
 ```bash
 bash math_intuitor.sh
 ```
 
-(Modify the WANDB_KEY in the `math_intuitor.sh` script to your own WANDB key.)
+
+**Note**: The only heuristic in Intuitor is the prompt used to query the model. As a result, performance can sometimes be sensitive to prompt design. If the model does not appear to learn effectively, we recommend trying alternative prompts or using the original prompt provided in our setup.
 
 ---
 
+## 📊 Benchmarks
 
-## References
+Intuitor achieves:
+
+- Comparable performance to GRPO on in-domain math reasoning tasks (GSM8K, MATH500)
+
+- Superior generalization to code generation (LiveCodeBench, CRUXEval)
+
+- Improved instruction following, without needing any gold labels or verifiable test suites
+
+For detailed results, see Table 1 in the paper.
+
+
+## 📚 References
 
 This project builds upon the following open-source repositories:
 
-open-r1
+- [open-r1](https://github.com/huggingface/open-r1) License: [Apache License 2.0](https://github.com/huggingface/open-r1/blob/main/LICENSE)
 
-* *Repository:* [open-r1](https://github.com/huggingface/open-r1) *License:* [Apache License 2.0](https://github.com/huggingface/open-r1/blob/main/LICENSE)
-* *Description:* A community re-implementation of DeepSeek-R1 that provides transparent GRPO training.
-
-verl
-
-* *Repository:* [verl](https://github.com/volcengine/verl) *License:* [Apache License 2.0](https://github.com/volcengine/verl/blob/main/LICENSE)
-* *Description:* A high-throughput RL training library featuring hybrid-controller data-flow, FSDP, and vLLM back-ends for large-scale LLM reinforcement learning.
+- [verl](https://github.com/volcengine/verl) License: [Apache License 2.0](https://github.com/volcengine/verl/blob/main/LICENSE)
 
 ---
+
 ## 📄 Citation
 
 If you use Intuitor in your research, please cite our paper:

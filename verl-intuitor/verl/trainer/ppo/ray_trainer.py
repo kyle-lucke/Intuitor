@@ -231,14 +231,14 @@ def compute_advantage(data: DataProto, adv_estimator, gamma=1.0, lam=1.0, num_re
         # Broadcast sentence-level scores back to token-level shape for compatibility
         token_level_rewards = sentence_wise_mean.unsqueeze(1).expand_as(self_certaintys)  # [B, T]
 
-        # print('-------------------------------- This is Intuitor --------------------------------')
-        # print(f"data.batch['self_certaintys'].shape: {data.batch['self_certaintys'].shape}")
-        # print(f"data.batch['self_certaintys']: {data.batch['self_certaintys']}")
-        # print(f"data.batch['response_mask']: {data.batch['response_mask']}")
-        # print(f"sentence_wise_mean: {sentence_wise_mean}")
-        # print(f"sentence_wise_mean.shape: {sentence_wise_mean.shape}")
-        # print(f"token_level_rewards: {token_level_rewards}")
-        # print('-------------------------------- End of Intuitor --------------------------------')
+        print('-------------------------------- This is Intuitor --------------------------------')
+        print(f"data.batch['self_certaintys'].shape: {data.batch['self_certaintys'].shape}")
+        print(f"data.batch['self_certaintys']: {data.batch['self_certaintys']}")
+        print(f"data.batch['response_mask']: {data.batch['response_mask']}")
+        print(f"sentence_wise_mean: {sentence_wise_mean}")
+        print(f"sentence_wise_mean.shape: {sentence_wise_mean.shape}")
+        print(f"token_level_rewards: {token_level_rewards}")
+        print('-------------------------------- End of Intuitor --------------------------------')
 
         # Use this in the GRPO advantage computation
         advantages, returns = core_algos.compute_grpo_outcome_advantage(
