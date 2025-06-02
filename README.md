@@ -34,7 +34,13 @@ We have released four model checkpoints trained on the MATH dataset for one epoc
 This repository contains **two self-contained implementations** of Intuitor:
 
 - [`open-r1-intuitor`](./open-r1-intuitor/README.md): Based on Hugging Face’s Open-R1, reproducing DeepSeek-R1 in a fully open-source fashion.
+
+&nbsp;&nbsp; ↳ Built on commit [`ebd5913`](https://github.com/huggingface/open-r1/tree/ebd5913a85d60819d68a209a030583740fdf98a8)
+
 - [`verl-intuitor`](./verl-intuitor/README.md): Based on VERL, a high-performance RL training library designed for LLMs.
+
+&nbsp;&nbsp; ↳ Built on commit [`40dcabe`](https://github.com/volcengine/verl/tree/40dcabec38ca3f66693bbce83a36b3f2a9bcabb0)
+
 
 Both are licensed under Apache 2.0 and include their respective `LICENSE` and `NOTICE` files.
 
