@@ -52,6 +52,8 @@ Firstly, cd into the desired variant folder and set up the enviornment as specif
 
 ### open-r1-intuitor
 
+#### Training on MATH Dataset
+
 Modify the WANDB_KEY in the `run_intuitor.sh` script to your own WANDB key, then run the following command:
 
 ```bash
@@ -59,6 +61,20 @@ bash run_intuitor.sh
 ```
 
 To facilitate future research, we have enabled combining self-certainty with other reward signals. If reward weights are not set to 0, self-certainty and other rewards will first be normalized separately, then added together.
+
+#### Training on Codecontests Dataset
+
+First, download the code corpora and prepare the dataset using the following Python script:
+
+```bash
+python scripts/code_process.py
+```
+
+Modify the WANDB_KEY in the `run_intuitor_code.sh` script to your own WANDB key, then run the following command:
+
+```bash
+bash run_intuitor_code.sh
+```
 
 ### verl-intuitor
 
