@@ -62,7 +62,7 @@ def main_task(config):
     OmegaConf.resolve(config)
 
     local_path = copy_to_local(config.model.path)
-    trust_remote_code = config.data.get("trust_remote_code", False)
+    trust_remote_code = config.data.get("trust_remote_code", True)
     tokenizer = hf_tokenizer(local_path, trust_remote_code=trust_remote_code)
 
     if config.rollout.temperature == 0.0:

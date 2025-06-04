@@ -127,7 +127,7 @@ class vLLMRollout(BaseRollout):
                              please increase max_num_batched_tokens or disable chunked prefill"
             )
 
-        trust_remote_code = kwargs.get("trust_remote_code", False)
+        trust_remote_code = kwargs.get("trust_remote_code", True)
         load_format = "dummy" if config.load_format.startswith("dummy") else config.load_format
 
         limit_mm_per_prompt = None

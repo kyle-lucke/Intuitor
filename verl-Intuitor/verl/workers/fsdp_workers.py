@@ -165,7 +165,7 @@ class ActorRolloutRefWorker(Worker):
         use_remove_padding=False,
         use_fused_kernels=False,
         enable_gradient_checkpointing=False,
-        trust_remote_code=False,
+        trust_remote_code=True,
         use_liger=False,
         role="actor",
     ):

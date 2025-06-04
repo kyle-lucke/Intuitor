@@ -140,7 +140,7 @@ class AsyncvLLMServer(AsyncServerBase):
         model_path = config.model.path
         model_name = "/".join(model_path.split("/")[-2:])
         local_path = copy_to_local(model_path)
-        trust_remote_code = config.model.get("trust_remote_code", False)
+        trust_remote_code = config.model.get("trust_remote_code", True)
         config = config.rollout
 
         tensor_parallel_size = config.get("tensor_model_parallel_size", 1)

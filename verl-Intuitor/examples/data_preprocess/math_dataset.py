@@ -30,7 +30,7 @@ def extract_solution(solution_str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--local_dir", default="~/data/math_new")
+    parser.add_argument("--local_dir", default="~/data/math_min")
     parser.add_argument("--hdfs_dir", default=None)
 
     args = parser.parse_args()
@@ -45,7 +45,8 @@ if __name__ == "__main__":
     test_dataset = dataset["test"]
 
     # instruction_following = "Let's think step by step and output the final answer within \\boxed{}."
-    instruction_following = "You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. You FIRST think about the reasoning process step by step and then provide the user with the answer. Please enclose your final answer in the box: \\boxed{}."
+    # instruction_following = "You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. You FIRST think about the reasoning process step by step and then provide the user with the answer. Please enclose your final answer in the box: \\boxed{}."
+    instruction_following = "You are a helpful AI Assistant, designed to provided well-reasoned and detailed responses. Please provide a step-by-step solution to the following problem."
     # add a row to each data item that represents a unique id
     def make_map_fn(split):
         def process_fn(example, idx):
@@ -55,7 +56,6 @@ if __name__ == "__main__":
             data = {
                 "data_source": data_source,
                 "prompt": [
-                    {"role": "system", "content": instruction_following},
                     {"role": "user", "content": question},
                 ],
                 "ability": "math",

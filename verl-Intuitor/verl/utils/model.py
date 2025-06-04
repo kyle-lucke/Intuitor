@@ -59,7 +59,7 @@ def update_model_config(module_config, override_config_kwargs):
             setattr(module_config, key, val)
 
 
-def get_huggingface_actor_config(model_name: str, override_config_kwargs=None, trust_remote_code=False) -> Dict:
+def get_huggingface_actor_config(model_name: str, override_config_kwargs=None, trust_remote_code=True) -> Dict:
     if override_config_kwargs is None:
         override_config_kwargs = {}
     assert isinstance(override_config_kwargs, Dict), f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
@@ -71,7 +71,7 @@ def get_huggingface_actor_config(model_name: str, override_config_kwargs=None, t
 
 def get_generation_config(
     model: str,
-    trust_remote_code: bool = False,
+    trust_remote_code: bool = True,
 ) -> Optional[GenerationConfig]:
     try:
         return GenerationConfig.from_pretrained(model)
@@ -101,7 +101,7 @@ def create_huggingface_actor(model_name: str, override_config_kwargs=None, autom
     if automodel_kwargs is None:
         automodel_kwargs = {}
     assert isinstance(override_config_kwargs, Dict), f"override_config_kwargs must be a dict, got {type(override_config_kwargs)}"
-    module_config = get_huggingface_actor_config(model_name, override_config_kwargs, trust_remote_code=automodel_kwargs.get("trust_remote_code", False))
+    module_config = get_huggingface_actor_config(model_name, override_config_kwargs, trust_remote_code=automodel_kwargs.get("trust_remote_code", True))
     module: nn.Module = AutoModelForCausalLM.from_config(module_config, **automodel_kwargs)
     return module
 
