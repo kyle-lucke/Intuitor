@@ -15,7 +15,7 @@ Intuitor instantiates RLIF by using **self-certainty**—a model's confidence me
 
 ![Intuitor](figs/intuitor.png)
 
-## 🚀 Update [2025-06-02]
+## 🚀 Update [2025-06-15]
 
 We have released four model checkpoints trained on the MATH dataset for one epoch. You're welcome to try out the models and evaluate their performance!
 
@@ -26,6 +26,8 @@ We have released four model checkpoints trained on the MATH dataset for one epoc
 | `sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH` | 3B   | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH) |
 | `sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH` | 1.5B | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH) |
 | `sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH` | 3B   | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH) |
+| `sunblaze-ucb/OLMo-2-7B-SFT-Intuitor-MATH-1EPOCH` | 7B   | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/OLMo-2-7B-SFT-Intuitor-MATH-1EPOCH) |
+| `sunblaze-ucb/Qwen3-14B-Intuitor-MATH-1EPOCH` | 14B  | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen3-14B-Intuitor-MATH-1EPOCH) |
 
 
 
