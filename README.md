@@ -15,19 +15,23 @@ Intuitor instantiates RLIF by using **self-certainty**—a model's confidence me
 
 ![Intuitor](figs/intuitor.png)
 
-## 🚀 Update [2025-06-15]
+## 🚀 Update [2025-06-16]
 
 We have released four model checkpoints trained on the MATH dataset for one epoch. You're welcome to try out the models and evaluate their performance!
 
+[View Model Collections](https://huggingface.co/collections/sunblaze-ucb/intuitor-684f895c78ed2d3ef3a678b3)
 
 | Model Name | Size | Method | Hugging Face Link |
 |------------|------|--------|--------------------|
-| `sunblaze-ucb/Qwen2.5-1.5B-GRPO-MATH-1EPOCH` | 1.5B | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-1.5B-GRPO-MATH-1EPOCH) |
-| `sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH` | 3B   | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH) |
 | `sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH` | 1.5B | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-1.5B-Intuitor-MATH-1EPOCH) |
 | `sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH` | 3B   | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-Intuitor-MATH-1EPOCH) |
 | `sunblaze-ucb/OLMo-2-7B-SFT-Intuitor-MATH-1EPOCH` | 7B   | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/OLMo-2-7B-SFT-Intuitor-MATH-1EPOCH) |
 | `sunblaze-ucb/Qwen3-14B-Intuitor-MATH-1EPOCH` | 14B  | Intuitor | [View Model](https://huggingface.co/sunblaze-ucb/Qwen3-14B-Intuitor-MATH-1EPOCH) |
+| `sunblaze-ucb/Qwen2.5-1.5B-GRPO-MATH-1EPOCH` | 1.5B | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-1.5B-GRPO-MATH-1EPOCH) |
+| `sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH` | 3B   | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen2.5-3B-GRPO-MATH-1EPOCH) |
+| `sunblaze-ucb/OLMo-2-7B-SFT-GRPO-MATH-1EPOCH` | 7B   | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/OLMo-2-7B-SFT-GRPO-MATH-1EPOCH) |
+| `sunblaze-ucb/Qwen3-14B-GRPO-MATH-1EPOCH` | 14B  | GRPO | [View Model](https://huggingface.co/sunblaze-ucb/Qwen3-14B-GRPO-MATH-1EPOCH) |
+
 
 
 
