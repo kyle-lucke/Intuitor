@@ -1,7 +1,7 @@
 # Learning to Reason without External Rewards
 
-[📄 Paper](https://arxiv.org/abs/2505.19590) | [🤗 Hugging Face](https://huggingface.co/sunblaze-ucb)
-
+[![ArXiv](https://img.shields.io/badge/arXiv-2505.19590-b31b1b?style=flat&logo=arxiv&logoColor=white)](https://arxiv.org/abs/2505.19590)
+[![Hugging Face](https://img.shields.io/badge/HuggingFace-Intuitor-orange?logo=huggingface&logoColor=white)](https://huggingface.co/collections/sunblaze-ucb/intuitor-684f895c78ed2d3ef3a678b3)
 
 **Intuitor** is a reinforcement learning method that fine-tunes large language models (LLMs) using *self-certainty*—the model’s own internal confidence—as the sole reward. It is built on a novel paradigm we call **Reinforcement Learning from Internal Feedback (RLIF)**.
 
