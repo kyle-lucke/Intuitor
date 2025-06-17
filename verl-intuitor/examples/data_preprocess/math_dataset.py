@@ -41,8 +41,8 @@ if __name__ == "__main__":
     print(f"Loading the {data_source} dataset from huggingface...", flush=True)
     dataset = datasets.load_dataset(data_source, trust_remote_code=True)
 
-    train_dataset = dataset["train"]
-    test_dataset = dataset["test"]
+    train_dataset = dataset["train"].shuffle(seed=42)
+    test_dataset = dataset["test"].shuffle(seed=42)
 
     instruction_following = "Let's think step by step and output the final answer within \\boxed{}."
 
