@@ -32,8 +32,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--local_dir", default="~/data/math")
     parser.add_argument("--hdfs_dir", default=None)
-    parser.add_argument("--model", default="other", choices=["Qwen2.5-1.5B", "Qwen2.5-3B", "Qwen2.5-7B", "other"])
-    parser.add_argument("--seed", type=int, default=42, help="Random seed for shuffling the dataset")
 
     args = parser.parse_args()
 
@@ -46,32 +44,20 @@ if __name__ == "__main__":
     train_dataset = dataset["train"]
     test_dataset = dataset["test"]
 
-    instruction_following_0 = "Let's think step by step and output the final answer within \\boxed{}."
-    instruction_following_1 = "You are a helpful AI Assistant, designed to provide well-reasoned and detailed responses. You FIRST think about the reasoning process step by step and then provide the user with the answer. Please enclose your final answer in the box: \\boxed{Your Answer}."
-    instruction_following_2 = "You are a helpful AI Assistant, designed to provide well-reasoned and detailed responses. You FIRST think about the reasoning process step by step and then provide the user with the answer. Please enclose your final answer in the box: \\boxed{Your Answer}. Please stop generation immediately after outputing the box."
-    instruction_following_3 = "You are a helpful AI Assistant, designed to provide well-reasoned and detailed responses. Please provide a step-by-step solution to the following problem."
+    instruction_following = "Let's think step by step and output the final answer within \\boxed{}."
 
-    if args.model == "Qwen2.5-1.5B":
-        instruction_following = instruction_following_1
-    elif args.model == "Qwen2.5-3B":
-        instruction_following = instruction_following_2
-    elif args.model == "Qwen2.5-7B":
-        instruction_following = instruction_following_3
-    else:
-        instruction_following = instruction_following_0
-        
     # add a row to each data item that represents a unique id
     def make_map_fn(split):
         def process_fn(example, idx):
             question = example.pop("problem")
+
+            question = question + " " + instruction_following
+
             answer = example.pop("solution")
             solution = extract_solution(answer)
             data = {
                 "data_source": data_source,
-                "prompt": [
-                    {"role": "system", "content": instruction_following},
-                    {"role": "user", "content": question},
-                ],
+                "prompt": [{"role": "user", "content": question}],
                 "ability": "math",
                 "reward_model": {"style": "rule", "ground_truth": solution},
                 "extra_info": {"split": split, "index": idx},
@@ -85,10 +71,6 @@ if __name__ == "__main__":
 
     local_dir = args.local_dir
     hdfs_dir = args.hdfs_dir
-    
-    # Shuffle the dataset with a fixed seed
-    train_dataset = train_dataset.shuffle(seed=args.seed)
-    test_dataset = test_dataset.shuffle(seed=args.seed)
 
     train_dataset.to_parquet(os.path.join(local_dir, "train.parquet"))
     test_dataset.to_parquet(os.path.join(local_dir, "test.parquet"))
