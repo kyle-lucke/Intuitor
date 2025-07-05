@@ -81,6 +81,18 @@ Modify the WANDB_KEY in the `run_intuitor_code.sh` script to your own WANDB key,
 ```bash
 bash run_intuitor_code.sh
 ```
+#### Multi-node training with slurm
+Example slurm bash files to run grpo and intuitor are provided in `./slurm` folder, to submit the job. Please replace with your cluster info including `--partition`,  `--nodelist`(will automatically alloc if not specified), and `WANDB_API_KEY`.
+
+To submit the job, simply run any of the following
+```
+sbatch --nodes=5 ./slurm/run_7b_grpo.slurm Qwen2.5-7B grpo demo zero3
+sbatch --nodes=5 ./slurm/run_7b_spo.slurm Qwen2.5-7B intuitor demo zero3
+sbatch --nodes=9 ./slurm/run_14b_grpo.slurm Qwen2.5-14B grpo demo zero3
+sbatch --nodes=9 ./slurm/run_14b_spo.slurm Qwen2.5-14B intuitor demo zero3
+```
+The configs are assuming each node has 8 A100(40GB), for 80GB A100, fewer nodes are required.
+
 
 ### verl-intuitor
 
