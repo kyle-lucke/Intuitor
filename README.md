@@ -111,6 +111,9 @@ bash math_intuitor.sh
 
 **Note**: The only heuristic in Intuitor is the prompt used to query the model. As a result, performance can sometimes be sensitive to prompt design. If the model does not appear to learn effectively, we recommend trying alternative prompts or using the original prompt provided in our setup.
 
+#### Multi-node training with ray
+Verl currently supports ray for the multi-node training, check `./scripts_ray` [folder](./verl-intuitor/scripts_ray/) for detailed [instruction](./verl-intuitor/scripts_ray/README.md) and scripts.
+
 
 ## 📊 Benchmarks
 
