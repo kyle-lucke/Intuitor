@@ -28,12 +28,22 @@ from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 from transformers import PreTrainedTokenizer
 
+from verl.utils.device import get_device_name, get_torch_device
+
 try:
     from flash_attn.ops.triton.cross_entropy import cross_entropy_loss
 
     FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE = True
 except ImportError:
     FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE = False
+
+
+try:
+    import torch_npu
+
+    NPU_CROSS_ENTROPY_LOSS_AVAILABLE = hasattr(torch_npu, "npu_cross_entropy_loss")
+except ImportError:
+    NPU_CROSS_ENTROPY_LOSS_AVAILABLE = False
 
 
 def gather_from_labels(data, label):
@@ -53,7 +63,20 @@ def gather_from_labels(data, label):
 
 def logprobs_from_logits(logits, labels, inplace_backward=True):
     """
+    Compute per-token log-probabilities for the given labels.
+
+    Uses a Flash-Attention–based cross-entropy (if available) for efficient backward,
+    otherwise falls back to a standard log-softmax+gather approach.
+
     See: https://github.com/pytorch/pytorch/issues/563#issuecomment-330103591
+
+    Args:
+        logits (Tensor): Model outputs of shape (..., vocab_size).
+        labels (LongTensor): True class indices of shape matching logits[..., :-1].
+        inplace_backward (bool): If True and Flash-Attn is available, perform backward in-place.
+
+    Returns:
+        Tensor: Log-probabilities of the target labels, shape logits.shape[:-1].
     """
     if FLAH_ATTN_CROSS_ENTROPY_LOSS_AVAILABLE:
         batch_dim = logits.shape[:-1]
@@ -62,6 +85,8 @@ def logprobs_from_logits(logits, labels, inplace_backward=True):
         labels = labels.reshape(-1)
         output = logprobs_from_logits_flash_attn(logits, labels, inplace_backward=inplace_backward)
         output = output.view(*batch_dim)
+    elif NPU_CROSS_ENTROPY_LOSS_AVAILABLE:
+        output = logprobs_from_logits_torch_npu(logits, labels)
     else:
         output = logprobs_from_logits_v2(logits, labels)
     return output
@@ -69,8 +94,17 @@ def logprobs_from_logits(logits, labels, inplace_backward=True):
 
 def logprobs_from_logits_flash_attn(logits, labels, inplace_backward=True):
     output = cross_entropy_loss(logits, labels, inplace_backward=inplace_backward)
-    assert isinstance(output, tuple), "please make sure flash-attn>=2.4.3 where cross_entropy_loss returns Tuple[losses, z_losses]."
+    assert isinstance(output, tuple), (
+        "please make sure flash-attn>=2.4.3 where cross_entropy_loss returns Tuple[losses, z_losses]."
+    )
     return -output[0]
+
+
+def logprobs_from_logits_torch_npu(logits, labels):
+    batch_dim = logits.shape[:-1]
+    logits = logits.reshape(-1, logits.shape[-1])
+    loss, _, _, _ = torch_npu.npu_cross_entropy_loss(logits, labels.reshape(-1), reduction="none")
+    return -loss.view(*batch_dim)
 
 
 def logprobs_from_logits_naive(logits, labels):
@@ -114,21 +148,54 @@ def entropy_from_logits(logits: torch.Tensor):
     entropy = torch.logsumexp(logits, dim=-1) - torch.sum(pd * logits, dim=-1)
     return entropy
 
-
 def self_certainty_from_logits(logits: torch.Tensor):
     """Calculate self-certainty from logits."""
     self_certainty = torch.logsumexp(logits, dim=-1) - logits.mean(dim=-1)
     return self_certainty
 
+def entropy_from_logits_with_chunking(logits: torch.Tensor, chunk_size: int = 2048):
+    """Memory-efficient entropy calculation with chunking."""
+    entropy = torch.zeros(logits.shape[0], device=logits.device)
+    for i in range(0, logits.shape[0], chunk_size):
+        logits_chunk = logits[i : i + chunk_size].float()
+        pd_chunk = torch.nn.functional.softmax(logits_chunk, dim=-1)
+        entropy_chunk = torch.logsumexp(logits_chunk, dim=-1) - torch.sum(pd_chunk * logits_chunk, dim=-1)
+        entropy[i : i + chunk_size] = entropy_chunk
+    return entropy
+
+def self_certainty_from_logits_with_chunking(logits: torch.Tensor, chunk_size: int = 2048):
+    """Memory-efficient self-certainty calculation with chunking."""
+    self_certainty = torch.zeros(logits.shape[0], device=logits.device)
+    for i in range(0, logits.shape[0], chunk_size):
+        logits_chunk = logits[i : i + chunk_size].float()
+        self_certainty_chunk = torch.logsumexp(logits_chunk, dim=-1) - logits_chunk.mean(dim=-1)
+        self_certainty[i : i + chunk_size] = self_certainty_chunk
+    return self_certainty
+
 
 def masked_sum(values, mask, axis=None):
     """Compute mean of tensor with a masked values."""
-    return (values * mask).sum(axis=axis)
+    # If NaNs exist out of mask, replace NaNs in values with a value that
+    # won't affect the sum (e.g., 0 for masked regions)
+    valid_values = torch.where(mask.bool(), values, 0.0)
+    return (valid_values * mask).sum(axis=axis)
 
 
 def masked_mean(values, mask, axis=None):
-    """Compute mean of tensor with a masked values."""
-    return (values * mask).sum(axis=axis) / (mask.sum(axis=axis) + 1e-8)
+    """
+    Compute the mean of `values` over elements selected by `mask`.
+
+    Args:
+        values (Tensor): Input tensor.
+        mask (Tensor): Boolean or numeric mask of the same shape as `values`.
+        axis (int or tuple of int, optional): Dimension(s) along which to compute the mean.
+            Defaults to None (over all elements).
+
+    Returns:
+        Tensor: Masked mean, with shape equal to `values` reduced over `axis`.
+    """
+    s = masked_sum(values, mask, axis)
+    return s / (mask.sum(axis=axis) + 1e-8)
 
 
 def masked_var(values, mask, unbiased=True):
@@ -150,7 +217,18 @@ def masked_var(values, mask, unbiased=True):
 
 
 def masked_whiten(values, mask, shift_mean=True):
-    """Whiten values with masked values."""
+    """
+    Whiten `values` by normalizing with mean and variance computed over `mask`.
+
+    Args:
+        values (torch.Tensor): Input tensor.
+        mask (torch.Tensor): Boolean tensor of same shape, selects elements for stats.
+        shift_mean (bool): If True (default), output is zero-mean;
+                           if False, the original mean is re-added after scaling.
+
+    Returns:
+        torch.Tensor: Whitened tensor of same shape as `values`.
+    """
     mean, var = masked_mean(values, mask), masked_var(values, mask)
     whitened = (values - mean) * torch.rsqrt(var + 1e-8)
     if not shift_mean:
@@ -233,7 +311,9 @@ def allgather_dict_tensors(tensors: Union[Dict[str, torch.Tensor], TensorDict], 
 
 
 def split_dict_tensor_into_batches(tensors: TensorDict, batch_size) -> List[TensorDict]:
-    assert tensors.batch_size[0] % batch_size == 0, f"input data batch size: {tensors.batch_size[0]}, split batch size: {batch_size}"
+    assert tensors.batch_size[0] % batch_size == 0, (
+        f"input data batch size: {tensors.batch_size[0]}, split batch size: {batch_size}"
+    )
     return tensors.split(batch_size)
 
 
@@ -287,8 +367,12 @@ def postprocess_data(
 
     sequence_length = input_ids.shape[-1]
     if sequence_length < max_length:
-        input_ids = pad_sequence_to_length(input_ids, max_seq_len=max_length, pad_token_id=pad_token_id, left_pad=left_pad)
-        attention_mask = pad_sequence_to_length(attention_mask, max_seq_len=max_length, pad_token_id=0, left_pad=left_pad)
+        input_ids = pad_sequence_to_length(
+            input_ids, max_seq_len=max_length, pad_token_id=pad_token_id, left_pad=left_pad
+        )
+        attention_mask = pad_sequence_to_length(
+            attention_mask, max_seq_len=max_length, pad_token_id=0, left_pad=left_pad
+        )
     elif sequence_length > max_length:
         if truncation == "left":
             # actually, left truncation may not be reasonable
@@ -310,7 +394,9 @@ def postprocess_data(
     return input_ids, attention_mask
 
 
-def tokenize_and_postprocess_data(prompt: str, tokenizer: PreTrainedTokenizer, max_length: int, pad_token_id: int, left_pad=True, truncation="error"):
+def tokenize_and_postprocess_data(
+    prompt: str, tokenizer: PreTrainedTokenizer, max_length: int, pad_token_id: int, left_pad=True, truncation="error"
+):
     """Tokenize text and process outputs to consistent tensor shapes.
 
     Args:
@@ -382,7 +468,9 @@ def log_probs_from_logits_response_rmpad(input_ids, attention_mask, logits_rmpad
     input_ids_rmpad = input_ids_rmpad.squeeze(-1)
     input_ids_rmpad_rolled = torch.roll(input_ids_rmpad, shifts=-1, dims=0)
     full_log_probs_rmpad = logprobs_from_logits(logits=logits_rmpad, labels=input_ids_rmpad_rolled)  # (total_nnz,)
-    full_output = pad_input(hidden_states=full_log_probs_rmpad.unsqueeze(-1), indices=indices, batch=batch_size, seqlen=seqlen)
+    full_output = pad_input(
+        hidden_states=full_log_probs_rmpad.unsqueeze(-1), indices=indices, batch=batch_size, seqlen=seqlen
+    )
     output = full_output.squeeze(-1)[:, -response_length - 1 : -1]  # [batch_size, response_length]
     return output
 
@@ -408,7 +496,9 @@ def log_probs_from_logits_all_rmpad(input_ids_rmpad, logits_rmpad, indices, batc
     input_ids_rmpad = input_ids_rmpad.squeeze(-1)
     input_ids_rmpad_rolled = torch.roll(input_ids_rmpad, shifts=-1, dims=0)
     full_log_probs_rmpad = logprobs_from_logits(logits=logits_rmpad, labels=input_ids_rmpad_rolled)  # (total_nnz,)
-    full_output = pad_input(hidden_states=full_log_probs_rmpad.unsqueeze(-1), indices=indices, batch=batch_size, seqlen=seqlen)
+    full_output = pad_input(
+        hidden_states=full_log_probs_rmpad.unsqueeze(-1), indices=indices, batch=batch_size, seqlen=seqlen
+    )
     output = full_output.squeeze(-1)[:, -response_length - 1 : -1]  # [batch_size, response_length]
     return output
 
@@ -478,8 +568,22 @@ def get_constant_schedule_with_warmup(
     num_warmup_steps: int,
     last_epoch: int = -1,
 ):
+    """
+    Create a constant LR schedule with a linear warmup phase.
+
+    Args:
+        optimizer (Optimizer): Wrapped optimizer.
+        num_warmup_steps (int): Number of steps to ramp up the LR from 0 to initial value.
+        last_epoch (int, optional): The index of the last epoch when resuming training. Defaults to -1.
+
+    Returns:
+        LambdaLR: Scheduler that increases LR linearly during warmup, then holds it constant.
+    """
+
     def lr_lambda(current_step):
-        return min(1, float(current_step) / float(max(1, num_warmup_steps)))
+        if current_step < num_warmup_steps:
+            return float(current_step) / float(max(1.0, num_warmup_steps))
+        return 1.0
 
     return LambdaLR(optimizer, lr_lambda, last_epoch)
 
@@ -497,8 +601,12 @@ def prepare_decoder_attention_mask(attention_mask, input_shape, inputs_embeds):
 
     if attention_mask is not None:
         # [bsz, seq_len] -> [bsz, 1, tgt_seq_len, src_seq_len]
-        expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]).to(inputs_embeds.device)
-        combined_attention_mask = expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask
+        expanded_attn_mask = _expand_mask(attention_mask, inputs_embeds.dtype, tgt_len=input_shape[-1]).to(
+            inputs_embeds.device
+        )
+        combined_attention_mask = (
+            expanded_attn_mask if combined_attention_mask is None else expanded_attn_mask + combined_attention_mask
+        )
 
     return combined_attention_mask
 
@@ -599,14 +707,14 @@ def get_wsd_schedule_with_warmup(
 
 
 @contextmanager
-def check_cuda_is_available():
+def check_device_is_available():
     """
     Some modules must be imported after CUDA is initialized. Such as sglang's sharding manager.
 
     This context manager checks if CUDA is available and raises an error if it is not.
     """
-    if not torch.cuda.is_available():
-        raise RuntimeError("CUDA must be initialized before importing this module.")
+    if not get_torch_device().is_available():
+        raise RuntimeError("Device {} must be initialized before importing this module.".format(get_device_name()))
 
     yield
 
@@ -625,7 +733,7 @@ def distributed_mean_max_min_std(local_tensor, compute_max=True, compute_min=Tru
     """
     # Sum the local tensor across all processes
     local_sum = torch.sum(local_tensor)
-    local_num = torch.tensor(torch.numel(local_tensor), device="cuda")
+    local_num = torch.tensor(torch.numel(local_tensor), device=get_device_name())
 
     torch.distributed.all_reduce(local_sum, op=torch.distributed.ReduceOp.SUM)
     torch.distributed.all_reduce(local_num, op=torch.distributed.ReduceOp.SUM)

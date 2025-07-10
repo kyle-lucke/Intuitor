@@ -25,6 +25,7 @@ import torch
 from verl import DataProto
 from verl.utils.import_utils import deprecated
 
+
 @deprecated("verl.utils.metric.reduce_metrics")
 def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
     """
@@ -49,12 +50,12 @@ def reduce_metrics(metrics: Dict[str, List[Any]]) -> Dict[str, Any]:
 def _compute_response_info(batch: DataProto) -> Dict[str, Any]:
     """
     Computes information about prompts and responses from a batch.
-    
+
     This is an internal helper function that extracts masks and lengths for prompts and responses.
-    
+
     Args:
         batch: A DataProto object containing batch data with responses and attention masks.
-        
+
     Returns:
         A dictionary containing:
             - response_mask: Attention mask for the response tokens
@@ -98,6 +99,7 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
             - critic/vf_explained_var: Explained variance of the value function (if use_critic=True)
             - response_length/mean, max, min, clip_ratio: Statistics about response lengths
             - prompt_length/mean, max, min, clip_ratio: Statistics about prompt lengths
+            - num_turns/mean, max, min: Statistics about the number of multi-turn conversations
     """
     sequence_score = batch.batch["token_level_scores"].sum(-1)
     sequence_reward = batch.batch["token_level_rewards"].sum(-1)
@@ -108,7 +110,7 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
     max_response_length = batch.batch["responses"].shape[-1]
 
     prompt_mask = batch.batch["attention_mask"][:, :-max_response_length].bool()
-    response_mask = batch.batch["attention_mask"][:, -max_response_length:].bool()
+    response_mask = batch.batch["response_mask"].bool()
 
     max_prompt_length = prompt_mask.size(-1)
 
@@ -158,7 +160,9 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
         "response_length/mean": torch.mean(response_length).detach().item(),
         "response_length/max": torch.max(response_length).detach().item(),
         "response_length/min": torch.min(response_length).detach().item(),
-        "response_length/clip_ratio": torch.mean(torch.eq(response_length, max_response_length).float()).detach().item(),
+        "response_length/clip_ratio": torch.mean(torch.eq(response_length, max_response_length).float())
+        .detach()
+        .item(),
         # prompt length
         "prompt_length/mean": torch.mean(prompt_length).detach().item(),
         "prompt_length/max": torch.max(prompt_length).detach().item(),
@@ -166,7 +170,7 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
         "prompt_length/clip_ratio": torch.mean(torch.eq(prompt_length, max_prompt_length).float()).detach().item(),
     }
 
-    # Add self-certainty metrics if available
+        # Add self-certainty metrics if availableAdd commentMore actions
     if "self_certaintys" in batch.batch:
         self_certaintys = batch.batch["self_certaintys"]  # shape: [B, T]
         # response_mask is already computed and is boolean, convert to float for calculations
@@ -182,16 +186,26 @@ def compute_data_metrics(batch: DataProto, use_critic: bool = True) -> Dict[str,
             "self_certainty/mean": torch.mean(sentence_wise_mean_certainty).detach().item(),
             "self_certainty/max": torch.max(sentence_wise_mean_certainty).detach().item(),
             "self_certainty/min": torch.min(sentence_wise_mean_certainty).detach().item(),
+            "self_certainty/std": torch.std(sentence_wise_mean_certainty).detach().item(),
         })
+
+    
+    # multi-turn conversation
+    if "__num_turns__" in batch.non_tensor_batch:
+        num_turns = batch.non_tensor_batch["__num_turns__"]
+        metrics["num_turns/min"] = num_turns.min()
+        metrics["num_turns/max"] = num_turns.max()
+        metrics["num_turns/mean"] = num_turns.mean()
+
     return metrics
 
 
 def compute_timing_metrics(batch: DataProto, timing_raw: Dict[str, float]) -> Dict[str, Any]:
     """
     Computes timing metrics for different processing stages in PPO training.
-    
-    This function calculates both raw timing metrics (in seconds) and per-token timing in milliseconds 
-    (in milliseconds) for various processing stages like generation, reference computation, 
+
+    This function calculates both raw timing metrics (in seconds) and per-token timing metrics
+    (in milliseconds) for various processing stages like generation, reference computation,
     value computation, advantage computation, and model updates.
 
     Args:
@@ -221,30 +235,33 @@ def compute_timing_metrics(batch: DataProto, timing_raw: Dict[str, float]) -> Di
 
     return {
         **{f"timing_s/{name}": value for name, value in timing_raw.items()},
-        **{f"timing_per_token_ms/{name}": timing_raw[name] * 1000 / num_tokens_of_section[name] for name in set(num_tokens_of_section.keys()) & set(timing_raw.keys())},
+        **{
+            f"timing_per_token_ms/{name}": timing_raw[name] * 1000 / num_tokens_of_section[name]
+            for name in set(num_tokens_of_section.keys()) & set(timing_raw.keys())
+        },
     }
 
 
 def compute_throughout_metrics(batch: DataProto, timing_raw: Dict[str, float], n_gpus: int) -> Dict[str, Any]:
     """
     Computes throughput metrics for PPO training.
-    
+
     This function calculates performance metrics related to token processing speed,
     including the total number of tokens processed, time per step, and throughput
     (tokens per second per GPU).
-    
+
     Args:
         batch: A DataProto object containing batch data with meta information about token counts.
         timing_raw: A dictionary mapping stage names to their execution times in seconds.
                    Must contain a "step" key with the total step time.
         n_gpus: Number of GPUs used for training.
-        
+
     Returns:
         A dictionary containing:
             - perf/total_num_tokens: Total number of tokens processed in the batch
             - perf/time_per_step: Time taken for the step in seconds
             - perf/throughput: Tokens processed per second per GPU
-            
+
     Note:
         The throughput is calculated as total_tokens / (time * n_gpus) to normalize
         across different GPU counts.
@@ -338,15 +355,17 @@ def calc_maj_val(data: list[dict[str, Any]], vote_key: str, val_key: str) -> flo
     return maj_val
 
 
-def process_validation_metrics(data_sources: list[str], sample_inputs: list[str], infos_dict: dict[str, list[Any]], seed: int = 42) -> dict[str, dict[str, dict[str, float]]]:
+def process_validation_metrics(
+    data_sources: list[str], sample_inputs: list[str], infos_dict: dict[str, list[Any]], seed: int = 42
+) -> dict[str, dict[str, dict[str, float]]]:
     """
     Process validation metrics into a structured format with statistical analysis.
-    
+
     This function organizes validation metrics by data source and prompt, then computes
     various statistical measures including means, standard deviations, best/worst values,
     and majority voting results. It also performs bootstrap sampling to estimate statistics
     for different sample sizes.
-    
+
     Args:
         data_sources: List of data source identifiers for each sample.
         sample_inputs: List of input prompts corresponding to each sample.
@@ -362,7 +381,7 @@ def process_validation_metrics(data_sources: list[str], sample_inputs: list[str]
                 }
             }
         }
-        
+
         Where metric_name includes:
         - "mean@N": Mean value across N samples
         - "std@N": Standard deviation across N samples
@@ -372,7 +391,7 @@ def process_validation_metrics(data_sources: list[str], sample_inputs: list[str]
         - "worst@N/std": Standard deviation of the worst values in bootstrap samples
         - "maj@N/mean": Mean of majority voting results in bootstrap samples (if "pred" exists)
         - "maj@N/std": Standard deviation of majority voting results (if "pred" exists)
-        
+
     Example:
         >>> data_sources = ["source1", "source1", "source2"]
         >>> sample_inputs = ["prompt1", "prompt1", "prompt2"]
@@ -411,7 +430,9 @@ def process_validation_metrics(data_sources: list[str], sample_inputs: list[str]
                     ns.append(n_resps)
 
                     for n in ns:
-                        [(bon_mean, bon_std), (won_mean, won_std)] = bootstrap_metric(data=var_vals, subset_size=n, reduce_fns=[np.max, np.min], seed=seed)
+                        [(bon_mean, bon_std), (won_mean, won_std)] = bootstrap_metric(
+                            data=var_vals, subset_size=n, reduce_fns=[np.max, np.min], seed=seed
+                        )
                         metric[f"best@{n}/mean"], metric[f"best@{n}/std"] = bon_mean, bon_std
                         metric[f"worst@{n}/mean"], metric[f"worst@{n}/std"] = won_mean, won_std
                         if var2vals.get("pred", None) is not None:

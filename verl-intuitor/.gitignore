@@ -8,8 +8,7 @@
 **/*.tar.gz
 **/playground
 **/wandb
-flash_attn-2.7.4*
-flashinfer_python*
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -124,3 +123,4 @@ ENV/
 logs
 log
 outputs
+.history

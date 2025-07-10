@@ -25,6 +25,13 @@ MAGIC_ATTR = "attrs_3141562937"
 
 
 class Dispatch(DynamicEnum):
+    """Enum class defining different dispatch modes for distributed computation.
+
+    Each mode represents a specific strategy for distributing data across
+    different ranks in a distributed system. The modes are used to control
+    how data is partitioned and processed across different worker groups.
+    """
+
     _registry = {}
     _next_value = 0
 
@@ -47,6 +54,12 @@ def init_predefined_dispatch_mode():
 
 
 class Execute(DynamicEnum):
+    """Enum class defining different execution modes for distributed computation.
+
+    These modes control how a function should be executed across different ranks
+    in a distributed system.
+    """
+
     _registry = {}
     _next_value = 0
 
@@ -94,7 +107,9 @@ def _split_args_kwargs_data_proto_with_auto_padding(chunks, *args, **kwargs):
                 padding_size = (chunks - (data_proto_len % chunks)) if (data_proto_len % chunks > 0) else 0
                 splitted_kwargs[_padding_size_key] = padding_size
             else:
-                assert data_proto_len == len(arg), f"expecting all arg share same length of {data_proto_len}, but got {len(arg)}"
+                assert data_proto_len == len(arg), (
+                    f"expecting all arg share same length of {data_proto_len}, but got {len(arg)}"
+                )
                 data_proto_len = len(arg)
             arg.padding(padding_size=padding_size)
 
@@ -109,7 +124,9 @@ def _split_args_kwargs_data_proto_with_auto_padding(chunks, *args, **kwargs):
                 padding_size = chunks - (data_proto_len % chunks)
                 splitted_kwargs[_padding_size_key] = padding_size
             else:
-                assert data_proto_len == len(val), f"expecting all arg share same length of {data_proto_len}, but got {len(val)}"
+                assert data_proto_len == len(val), (
+                    f"expecting all arg share same length of {data_proto_len}, but got {len(val)}"
+                )
                 data_proto_len = len(val)
         splitted_kwargs[key] = val.chunk(chunks=chunks)
 
@@ -140,7 +157,15 @@ def dispatch_megatron_compute(worker_group, *args, **kwargs):
     """
     from verl.single_controller.base.megatron.worker_group import MegatronWorkerGroup
 
-    assert isinstance(worker_group, MegatronWorkerGroup), f"worker_group must be MegatronWorkerGroup, Got {type(worker_group)}"
+    assert isinstance(worker_group, MegatronWorkerGroup), (
+        f"worker_group must be MegatronWorkerGroup, Got {type(worker_group)}"
+    )
+
+    # ray put all the args in advance to avoid duplicate serialization cost
+    import ray
+
+    args = [[ray.put(dp_arg) for dp_arg in arg] for arg in args]
+    kwargs = {k: [ray.put(dp_v) for dp_v in v] for k, v in kwargs.items()}
 
     all_args = []
     for arg in args:
@@ -247,7 +272,8 @@ def dispatch_megatron_pp_as_dp(worker_group, *args, **kwargs):
             local_pp_rank = worker_group.get_megatron_rank_info(rank=i).pp_rank
             local_cp_rank = worker_group.get_megatron_rank_info(rank=i).cp_rank
             # compute the rank in arg. Note that the order is dp then cp then pp
-            # Also note that the outputs within a pp group will be firstly allgathered, then only the output of pp0 will be collected.
+            # Also note that the outputs within a pp group will be firstly allgathered, then only the
+            # output of pp0 will be collected.
             # For pp=2 dp=4, a batch of data "ABCDEFGH" should be dispatched and collected in below order:
             #    dispatch:       pp_allgther:        collect:
             #   dp 0 1 2 3      dp  0  1  2  3
@@ -463,7 +489,9 @@ def get_predefined_execute_fn(execute_mode):
 
 
 def _check_dispatch_mode(dispatch_mode):
-    assert isinstance(dispatch_mode, (Dispatch, Dict)), f"dispatch_mode must be a Dispatch or a Dict. Got {dispatch_mode}"
+    assert isinstance(dispatch_mode, (Dispatch, Dict)), (
+        f"dispatch_mode must be a Dispatch or a Dict. Got {dispatch_mode}"
+    )
     if isinstance(dispatch_mode, Dict):
         necessary_keys = ["dispatch_fn", "collect_fn"]
         for key in necessary_keys:
@@ -490,6 +518,26 @@ def _materialize_futures(*args, **kwargs):
 
 
 def register(dispatch_mode=Dispatch.ALL_TO_ALL, execute_mode=Execute.ALL, blocking=True, materialize_futures=True):
+    """Register a function with distributed execution configuration.
+
+    This decorator registers a function with specific dispatch and execution modes
+    for distributed computation. It handles both synchronous and asynchronous
+    functions, and optionally materializes futures before execution.
+
+    Args:
+        dispatch_mode:
+            Dispatch mode for computation distribution. Default: Dispatch.ALL_TO_ALL.
+        execute_mode:
+            Execute mode for computation distribution. Default: Execute.ALL.
+        blocking:
+            Whether the execution should be blocking. Defaults to True.
+        materialize_futures:
+            Whether to materialize the data before dispatching. Defaults to True.
+
+    Returns:
+        A decorator that wraps the original function with distributed execution
+        configuration.
+    """
     _check_dispatch_mode(dispatch_mode=dispatch_mode)
     _check_execute_mode(execute_mode=execute_mode)
 

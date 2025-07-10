@@ -45,7 +45,7 @@ This repository contains **two self-contained implementations** of Intuitor:
 
 - [`verl-intuitor`](./verl-intuitor/README.md): Based on VERL, a high-performance RL training library designed for LLMs.
 
-&nbsp;&nbsp; ↳ Built on commit [`40dcabe`](https://github.com/volcengine/verl/tree/40dcabec38ca3f66693bbce83a36b3f2a9bcabb0)
+&nbsp;&nbsp; ↳ Built on commit [`c26b0f2`](https://github.com/volcengine/verl/tree/c26b0f29062b7cf6a738a6f33f32bcf82d992a10)
 
 
 Both are licensed under Apache 2.0 and include their respective `LICENSE` and `NOTICE` files.

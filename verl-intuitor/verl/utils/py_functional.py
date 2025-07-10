@@ -124,11 +124,16 @@ def timeout_limit(seconds: float, use_signals: bool = False):
                 except queue.Empty as err:
                     exitcode = process.exitcode
                     if exitcode is not None and exitcode != 0:
-                        raise RuntimeError(f"Child process exited with error (exitcode: {exitcode}) before returning result.") from err
+                        raise RuntimeError(
+                            f"Child process exited with error (exitcode: {exitcode}) before returning result."
+                        ) from err
                     else:
                         # Should have timed out if queue is empty after join unless process died unexpectedly
                         # Update function name in error message if needed (optional but good practice)
-                        raise TimeoutError(f"Operation timed out or process finished unexpectedly without result (exitcode: {exitcode}).") from err
+                        raise TimeoutError(
+                            f"Operation timed out or process finished unexpectedly without result "
+                            f"(exitcode: {exitcode})."
+                        ) from err
                 finally:
                     q.close()
                     q.join_thread()
@@ -157,6 +162,18 @@ def union_two_dict(dict1: Dict, dict2: Dict):
 
 
 def append_to_dict(data: Dict, new_data: Dict):
+    """Append values from new_data to lists in data.
+
+    For each key in new_data, this function appends the corresponding value to a list
+    stored under the same key in data. If the key doesn't exist in data, a new list is created.
+
+    Args:
+        data (Dict): The target dictionary containing lists as values.
+        new_data (Dict): The source dictionary with values to append.
+
+    Returns:
+        None: The function modifies data in-place.
+    """
     for key, val in new_data.items():
         if key not in data:
             data[key] = []
@@ -164,6 +181,21 @@ def append_to_dict(data: Dict, new_data: Dict):
 
 
 class NestedNamespace(SimpleNamespace):
+    """A nested version of SimpleNamespace that recursively converts dictionaries to namespaces.
+
+    This class allows for dot notation access to nested dictionary structures by recursively
+    converting dictionaries to NestedNamespace objects.
+
+    Example:
+        config_dict = {"a": 1, "b": {"c": 2, "d": 3}}
+        config = NestedNamespace(config_dict)
+        # Access with: config.a, config.b.c, config.b.d
+
+    Args:
+        dictionary: The dictionary to convert to a nested namespace.
+        **kwargs: Additional attributes to set on the namespace.
+    """
+
     def __init__(self, dictionary, **kwargs):
         super().__init__(**kwargs)
         for key, value in dictionary.items():
@@ -238,3 +270,16 @@ class DynamicEnum(metaclass=DynamicEnumMeta):
     @classmethod
     def from_name(cls, name: str) -> Optional["DynamicEnum"]:
         return cls._registry.get(name.upper())
+
+
+def convert_to_regular_types(obj):
+    """Convert Hydra configs and other special types to regular Python types."""
+    from omegaconf import DictConfig, ListConfig
+
+    if isinstance(obj, (ListConfig, DictConfig)):
+        return {k: convert_to_regular_types(v) for k, v in obj.items()} if isinstance(obj, DictConfig) else list(obj)
+    elif isinstance(obj, (list, tuple)):
+        return [convert_to_regular_types(x) for x in obj]
+    elif isinstance(obj, dict):
+        return {k: convert_to_regular_types(v) for k, v in obj.items()}
+    return obj
