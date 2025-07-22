@@ -1,19 +1,29 @@
 #!/bin/bash
 
+#SBATCH -p gpu-mxian
+
+## NOTE: vLLM does not work on node02 due to some weird bug related to V0 engine version
+#SBATCH --nodelist=node01
+#SBATCH --gpus 2
+
 source ./openr1/bin/activate
-export WANDB_API_KEY=YOUR_WANDB_API_KEY
+source ~/.bashrc
+
 export ACCELERATE_LOG_LEVEL=info
 
 # Run vllm-serve in the background with nohup
-nohup env CUDA_VISIBLE_DEVICES=0 trl vllm-serve --model "Qwen/Qwen2.5-3B" > vllm-serve.log 2>&1 &
+nohup env CUDA_VISIBLE_DEVICES=0 trl vllm-serve --model "Qwen/Qwen3-0.6B" > vllm-serve.log 2>&1 &
 VLLM_PID=$!
 echo "vLLM server started with PID: $VLLM_PID"
 
-# Run accelerate launch in the background with nohup
-nohup env CUDA_VISIBLE_DEVICES=1,2,3,4,5,6,7 ACCELERATE_LOG_LEVEL=info\
-    accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 \
-    src/open_r1/intuitor.py --config recipes/Qwen2.5-3B/intuitor/config_demo.yaml --wandb_project open-r1 --run_name Qwen2.5-Intuitor-3B > run_intuitor.log 2>&1 &
-TRAINING_PID=$!
-echo "Training process started with PID: $TRAINING_PID"
+## w/ accelerate
+# # Run accelerate launch in the background with nohup
+# CUDA_VISIBLE_DEVICES=1,2 \
+#     accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 \
+#     src/open_r1/intuitor.py --config recipes/Qwen3-0.6B/intuitor/config_demo.yaml --wandb_project open-r1 --run_name Qwen3-Intuitor-0.6B
+# TRAINING_PID=$!
 
-echo "Both processes started in the background. Check vllm-serve.log and run_intuitor.log for output."
+# w/o accelerate
+CUDA_VISIBLE_DEVICES=1 \
+    python src/open_r1/intuitor.py --config recipes/Qwen3-0.6B/intuitor/config_demo.yaml --wandb_project open-r1 --run_name Qwen3-Intuitor-0.6B
+
