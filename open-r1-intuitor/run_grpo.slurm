@@ -31,8 +31,8 @@ echo "vLLM server started in the background with PID: $VLLM_PID. Check vllm-serv
 #     accelerate launch --config_file recipes/accelerate_configs/zero2.yaml --num_processes=7 \
 #     src/open_r1/grpo.py --config recipes/Qwen3-0.6B/grpo/config_demo.yaml --wandb_project open-r1 --run_name Qwen3-GRPO-0.6B 
 
-# w/o accelerate
-CUDA_VISIBLE_DEVICES=1 python src/open_r1/grpo.py --config recipes/Qwen3-0.6B/grpo/config_demo.yaml --wandb_project open-r1 --run_name Qwen3-GRPO-0.6B
+# NOTE: need accelerate for colocated vLLM to work...
+accelerate launch --config_file recipes/accelerate_configs/zero3.yaml --num-processes=1 src/open_r1/grpo.py --config recipes/Qwen3-0.6B/grpo/config_demo.yaml --wandb_project open-r1 --run_name Qwen3-GRPO-0.6B-debug
 
 # TRAINING_PID=$!
 # echo "Training process started with PID: $TRAINING_PID"
