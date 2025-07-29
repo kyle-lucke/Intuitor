@@ -58,6 +58,13 @@ class GRPOConfig(trl.GRPOConfig):
     )
 
 
+    gamma: float = field(
+        default=0.1,
+        metadata={"help": "Gamma value for generalized entropy."},
+    )
+
+    
+
 @dataclass
 class SFTConfig(trl.SFTConfig):
     """
